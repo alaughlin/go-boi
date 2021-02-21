@@ -451,6 +451,32 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.dec_r(cpu.l)
 	case 0x35:
 		cpu.dec_addr(cpu.hl(), memory)
+	case 0x09:
+		cpu.add_r_double(cpu.h, cpu.l, cpu.bc())
+	case 0x19:
+		cpu.add_r_double(cpu.h, cpu.l, cpu.de())
+	case 0x29:
+		cpu.add_r_double(cpu.h, cpu.l, cpu.hl())
+	case 0x39:
+		cpu.add_r_double(cpu.h, cpu.l, cpu.sp)
+	case 0xE8:
+		cpu.add_sp(memory.read(cpu.pc + 1))
+	case 0x03:
+		cpu.inc_r_double(cpu.b, cpu.c)
+	case 0x13:
+		cpu.inc_r_double(cpu.d, cpu.e)
+	case 0x23:
+		cpu.inc_r_double(cpu.h, cpu.l)
+	case 0x33:
+		cpu.inc_sp()
+	case 0x0B:
+		cpu.dec_r_double(cpu.b, cpu.c)
+	case 0x1B:
+		cpu.dec_r_double(cpu.d, cpu.e)
+	case 0x2B:
+		cpu.dec_r_double(cpu.h, cpu.l)
+	case 0x3B:
+		cpu.dec_sp()
 	}
 }
 
@@ -567,5 +593,44 @@ func (cpu *cpu) dec_r(n *byte) {
 func (cpu *cpu) dec_addr(addr uint16, memory *memory) {
 	memory.decrement(addr)
 	// TODO: set flags
+	cpu.pc++
+}
+
+// 16-Bit ALU
+func (cpu *cpu) add_r_double(r1 *byte, r2 *byte, nn uint16) {
+	res := double(*r1, *r2) + nn
+	*r1 = uint8(res >> 8)
+	*r2 = uint8(res & 0x00FF)
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) add_sp(n byte) {
+	cpu.sp += uint16(n)
+	// TODO: set flags
+	cpu.pc += 2
+}
+
+func (cpu *cpu) inc_r_double(r1 *byte, r2 *byte) {
+	res := double(*r1, *r2) + 1
+	*r1 = uint8(res >> 8)
+	*r2 = uint8(res & 0x00FF)
+	cpu.pc++
+}
+
+func (cpu *cpu) inc_sp() {
+	cpu.sp++
+	cpu.pc++
+}
+
+func (cpu *cpu) dec_r_double(r1 *byte, r2 *byte) {
+	res := double(*r1, *r2) - 1
+	*r1 = uint8(res >> 8)
+	*r2 = uint8(res & 0x00FF)
+	cpu.pc++
+}
+
+func (cpu *cpu) dec_sp() {
+	cpu.sp--
 	cpu.pc++
 }
