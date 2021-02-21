@@ -1,17 +1,16 @@
 package gameboy
 
 type cpu struct {
-	a     *byte
-	b     *byte
-	c     *byte
-	d     *byte
-	e     *byte
-	f     *byte
-	h     *byte
-	l     *byte
-	flags *int
-	sp    uint16
-	pc    uint16
+	a  *byte
+	b  *byte
+	c  *byte
+	d  *byte
+	e  *byte
+	f  *byte
+	h  *byte
+	l  *byte
+	sp uint16
+	pc uint16
 }
 
 var (
@@ -39,28 +38,32 @@ func initializeCPU() *cpu {
 	}
 }
 
+func (cpu *cpu) af() uint16 {
+	return double(*cpu.a, *cpu.f)
+}
+
 func (cpu *cpu) bc() uint16 {
-	return doubleRegister(*cpu.b, *cpu.c)
+	return double(*cpu.b, *cpu.c)
 }
 
 func (cpu *cpu) de() uint16 {
-	return doubleRegister(*cpu.d, *cpu.e)
+	return double(*cpu.d, *cpu.e)
 }
 
 func (cpu *cpu) hl() uint16 {
-	return doubleRegister(*cpu.h, *cpu.l)
+	return double(*cpu.h, *cpu.l)
 }
 
-func doubleRegister(r1 byte, r2 byte) uint16 {
-	return uint16(r1)<<8 | uint16(r2)
+func double(n1 byte, n2 byte) uint16 {
+	return uint16(n1)<<8 | uint16(n2)
 }
 
 func (cpu *cpu) setFlag(flagPos int) {
-	*cpu.flags |= (1 << flagPos)
+	*cpu.f |= (1 << flagPos)
 }
 
 func (cpu *cpu) clearFlag(flagPos int) {
-	*cpu.flags &^= (1 << flagPos)
+	*cpu.f &^= (1 << flagPos)
 }
 
 func (cpu *cpu) ExecuteOpcode(memory *memory) {
@@ -242,9 +245,42 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.ld_addr(0xFF00+uint16(memory.read(cpu.pc+1)), *cpu.a, memory, 1)
 	case 0xF0:
 		cpu.ld_r(cpu.a, memory.read(0xFF00+uint16(memory.read(cpu.pc+1))), 1)
+	// 16-bit loads
+	case 0x01:
+		cpu.ld_r_double(cpu.b, cpu.c, memory.readDouble(cpu.pc+1), 3)
+	case 0x11:
+		cpu.ld_r_double(cpu.d, cpu.e, memory.readDouble(cpu.pc+1), 3)
+	case 0x21:
+		cpu.ld_r_double(cpu.h, cpu.l, memory.readDouble(cpu.pc+1), 3)
+	case 0x31:
+		cpu.ld_sp(memory.readDouble(cpu.pc+1), 3)
+	case 0xF9:
+		cpu.ld_sp(cpu.hl(), 1)
+	case 0xF8:
+		// TODO: this is awful. check this. also need to set flag bits.
+		cpu.ld_r_double(cpu.h, cpu.l, uint16(int16(cpu.sp)+int16(memory.read(cpu.pc+1))), 2)
+	case 0x08:
+		cpu.ld_addr_double(double(memory.read(cpu.pc+1), memory.read(cpu.pc+2)), cpu.sp, memory, 3)
+	case 0xF5:
+		cpu.push(memory.readDouble(cpu.af()), memory)
+	case 0xC5:
+		cpu.push(memory.readDouble(cpu.bc()), memory)
+	case 0xD5:
+		cpu.push(memory.readDouble(cpu.de()), memory)
+	case 0xE5:
+		cpu.push(memory.readDouble(cpu.hl()), memory)
+	case 0xF1:
+		cpu.pop(cpu.a, cpu.f, memory)
+	case 0xC1:
+		cpu.pop(cpu.b, cpu.c, memory)
+	case 0xD1:
+		cpu.pop(cpu.d, cpu.e, memory)
+	case 0xE1:
+		cpu.pop(cpu.h, cpu.l, memory)
 	}
 }
 
+// 8-bit loads
 func (cpu *cpu) ld_r(r *byte, n byte, incrementBy uint16) {
 	*r = n
 	cpu.pc += incrementBy
@@ -253,4 +289,35 @@ func (cpu *cpu) ld_r(r *byte, n byte, incrementBy uint16) {
 func (cpu *cpu) ld_addr(addr uint16, n byte, memory *memory, incrementBy uint16) {
 	memory.write(addr, n)
 	cpu.pc += incrementBy
+}
+
+// 16-bit loads
+func (cpu *cpu) ld_r_double(r1 *byte, r2 *byte, nn uint16, incrementBy uint16) {
+	*r1 = uint8(nn >> 8)
+	*r2 = uint8(nn & 0x00FF)
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) ld_addr_double(addr uint16, nn uint16, memory *memory, incrementBy uint16) {
+	memory.writeDouble(addr, nn)
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) ld_sp(nn uint16, incrementBy uint16) {
+	cpu.sp = nn
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) push(nn uint16, memory *memory) {
+	cpu.sp--
+	memory.write(cpu.sp, uint8(nn>>8))
+	cpu.sp--
+	memory.write(cpu.sp, uint8(nn&0x00FF))
+}
+
+func (cpu *cpu) pop(r1 *byte, r2 *byte, memory *memory) {
+	*r1 = memory.read(cpu.sp)
+	cpu.sp++
+	*r2 = memory.read(cpu.sp)
+	cpu.sp++
 }

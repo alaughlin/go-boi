@@ -70,9 +70,18 @@ func (memory *memory) read(address uint16) byte {
 	return (*slice)[address-offset]
 }
 
-func (memory *memory) write(address uint16, value byte) {
+func (memory *memory) readDouble(address uint16) uint16 {
+	return uint16(memory.read(address))<<8 | uint16(memory.read(address+1))
+}
+
+func (memory *memory) write(address uint16, n byte) {
 	slice, offset := memory.mapAddress(address)
-	(*slice)[address-offset] = value
+	(*slice)[address-offset] = n
+}
+
+func (memory *memory) writeDouble(address uint16, nn uint16) {
+	memory.write(address, byte(nn>>8))
+	memory.write(address+1, byte(nn&0x00FF))
 }
 
 func (memory *memory) decrement(address uint16) {
