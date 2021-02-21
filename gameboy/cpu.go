@@ -70,7 +70,7 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 	opcode := memory.read(cpu.pc)
 
 	switch opcode {
-	// 8-bit loads
+	// 8-Bit Loads
 	case 0x06:
 		cpu.ld_r(cpu.b, memory.read(cpu.pc+1), 2)
 	case 0x0E:
@@ -245,7 +245,7 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.ld_addr(0xFF00+uint16(memory.read(cpu.pc+1)), *cpu.a, memory, 1)
 	case 0xF0:
 		cpu.ld_r(cpu.a, memory.read(0xFF00+uint16(memory.read(cpu.pc+1))), 1)
-	// 16-bit loads
+	// 16-Bit Loads
 	case 0x01:
 		cpu.ld_r_double(cpu.b, cpu.c, memory.readDouble(cpu.pc+1), 3)
 	case 0x11:
@@ -257,7 +257,7 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 	case 0xF9:
 		cpu.ld_sp(cpu.hl(), 1)
 	case 0xF8:
-		// TODO: this is awful. check this. also need to set flag bits.
+		// TODO: this is awful. check this. also need to set flags.
 		cpu.ld_r_double(cpu.h, cpu.l, uint16(int16(cpu.sp)+int16(memory.read(cpu.pc+1))), 2)
 	case 0x08:
 		cpu.ld_addr_double(double(memory.read(cpu.pc+1), memory.read(cpu.pc+2)), cpu.sp, memory, 3)
@@ -277,10 +277,184 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.pop(cpu.d, cpu.e, memory)
 	case 0xE1:
 		cpu.pop(cpu.h, cpu.l, memory)
+	case 0x87:
+		cpu.add_r(cpu.a, *cpu.a, 1)
+	case 0x80:
+		cpu.add_r(cpu.a, *cpu.b, 1)
+	case 0x81:
+		cpu.add_r(cpu.a, *cpu.c, 1)
+	case 0x82:
+		cpu.add_r(cpu.a, *cpu.d, 1)
+	case 0x83:
+		cpu.add_r(cpu.a, *cpu.e, 1)
+	case 0x84:
+		cpu.add_r(cpu.a, *cpu.h, 1)
+	case 0x85:
+		cpu.add_r(cpu.a, *cpu.l, 1)
+	case 0x86:
+		cpu.add_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xC6:
+		cpu.add_r(cpu.a, memory.read(cpu.pc+1), 2)
+	case 0x8F:
+		cpu.adc_r(cpu.a, *cpu.a, 1)
+	case 0x88:
+		cpu.adc_r(cpu.a, *cpu.b, 1)
+	case 0x89:
+		cpu.adc_r(cpu.a, *cpu.c, 1)
+	case 0x8A:
+		cpu.adc_r(cpu.a, *cpu.d, 1)
+	case 0x8B:
+		cpu.adc_r(cpu.a, *cpu.e, 1)
+	case 0x8C:
+		cpu.adc_r(cpu.a, *cpu.h, 1)
+	case 0x8D:
+		cpu.adc_r(cpu.a, *cpu.l, 1)
+	case 0x8E:
+		cpu.adc_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xCE:
+		cpu.adc_r(cpu.a, memory.read(cpu.pc+1), 2)
+	case 0x97:
+		cpu.sub_r(cpu.a, *cpu.a, 1)
+	case 0x90:
+		cpu.sub_r(cpu.a, *cpu.b, 1)
+	case 0x91:
+		cpu.sub_r(cpu.a, *cpu.c, 1)
+	case 0x92:
+		cpu.sub_r(cpu.a, *cpu.d, 1)
+	case 0x93:
+		cpu.sub_r(cpu.a, *cpu.e, 1)
+	case 0x94:
+		cpu.sub_r(cpu.a, *cpu.h, 1)
+	case 0x95:
+		cpu.sub_r(cpu.a, *cpu.l, 1)
+	case 0x96:
+		cpu.sub_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xD6:
+		cpu.sub_r(cpu.a, memory.read(cpu.pc+1), 2)
+	case 0x9F:
+		cpu.sbc_r(cpu.a, *cpu.a, 1)
+	case 0x98:
+		cpu.sbc_r(cpu.a, *cpu.b, 1)
+	case 0x99:
+		cpu.sbc_r(cpu.a, *cpu.c, 1)
+	case 0x9A:
+		cpu.sbc_r(cpu.a, *cpu.d, 1)
+	case 0x9B:
+		cpu.sbc_r(cpu.a, *cpu.e, 1)
+	case 0x9C:
+		cpu.sbc_r(cpu.a, *cpu.h, 1)
+	case 0x9D:
+		cpu.sbc_r(cpu.a, *cpu.l, 1)
+	case 0x9E:
+		cpu.sbc_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xA7:
+		cpu.and_r(cpu.a, *cpu.a, 1)
+	case 0xA0:
+		cpu.and_r(cpu.a, *cpu.b, 1)
+	case 0xA1:
+		cpu.and_r(cpu.a, *cpu.c, 1)
+	case 0xA2:
+		cpu.and_r(cpu.a, *cpu.d, 1)
+	case 0xA3:
+		cpu.and_r(cpu.a, *cpu.e, 1)
+	case 0xA4:
+		cpu.and_r(cpu.a, *cpu.h, 1)
+	case 0xA5:
+		cpu.and_r(cpu.a, *cpu.l, 1)
+	case 0xA6:
+		cpu.and_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xE6:
+		cpu.and_r(cpu.a, memory.read(cpu.pc+1), 2)
+	case 0xB7:
+		cpu.or_r(cpu.a, *cpu.a, 1)
+	case 0xB0:
+		cpu.or_r(cpu.a, *cpu.b, 1)
+	case 0xB1:
+		cpu.or_r(cpu.a, *cpu.c, 1)
+	case 0xB2:
+		cpu.or_r(cpu.a, *cpu.d, 1)
+	case 0xB3:
+		cpu.or_r(cpu.a, *cpu.e, 1)
+	case 0xB4:
+		cpu.or_r(cpu.a, *cpu.h, 1)
+	case 0xB5:
+		cpu.or_r(cpu.a, *cpu.l, 1)
+	case 0xB6:
+		cpu.or_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xF6:
+		cpu.or_r(cpu.a, memory.read(cpu.pc+1), 2)
+	case 0xAF:
+		cpu.xor_r(cpu.a, *cpu.a, 1)
+	case 0xA8:
+		cpu.xor_r(cpu.a, *cpu.b, 1)
+	case 0xA9:
+		cpu.xor_r(cpu.a, *cpu.c, 1)
+	case 0xAA:
+		cpu.xor_r(cpu.a, *cpu.d, 1)
+	case 0xAB:
+		cpu.xor_r(cpu.a, *cpu.e, 1)
+	case 0xAC:
+		cpu.xor_r(cpu.a, *cpu.h, 1)
+	case 0xAD:
+		cpu.xor_r(cpu.a, *cpu.l, 1)
+	case 0xAE:
+		cpu.xor_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xEE:
+		cpu.xor_r(cpu.a, memory.read(cpu.pc+1), 2)
+	case 0xBF:
+		cpu.cp_r(cpu.a, *cpu.a, 1)
+	case 0xB8:
+		cpu.cp_r(cpu.a, *cpu.b, 1)
+	case 0xB9:
+		cpu.cp_r(cpu.a, *cpu.c, 1)
+	case 0xBA:
+		cpu.cp_r(cpu.a, *cpu.d, 1)
+	case 0xBB:
+		cpu.cp_r(cpu.a, *cpu.e, 1)
+	case 0xBC:
+		cpu.cp_r(cpu.a, *cpu.h, 1)
+	case 0xBD:
+		cpu.cp_r(cpu.a, *cpu.l, 1)
+	case 0xBE:
+		cpu.cp_r(cpu.a, memory.read(cpu.hl()), 1)
+	case 0xFE:
+		cpu.cp_r(cpu.a, memory.read(cpu.pc+1), 2)
+	case 0x3C:
+		cpu.inc_r(cpu.a)
+	case 0x04:
+		cpu.inc_r(cpu.b)
+	case 0x0C:
+		cpu.inc_r(cpu.c)
+	case 0x14:
+		cpu.inc_r(cpu.d)
+	case 0x1C:
+		cpu.inc_r(cpu.e)
+	case 0x24:
+		cpu.inc_r(cpu.h)
+	case 0x2C:
+		cpu.inc_r(cpu.l)
+	case 0x34:
+		cpu.inc_addr(cpu.hl(), memory)
+	case 0x3D:
+		cpu.dec_r(cpu.a)
+	case 0x05:
+		cpu.dec_r(cpu.b)
+	case 0x0D:
+		cpu.dec_r(cpu.c)
+	case 0x15:
+		cpu.dec_r(cpu.d)
+	case 0x1D:
+		cpu.dec_r(cpu.e)
+	case 0x25:
+		cpu.dec_r(cpu.h)
+	case 0x2D:
+		cpu.dec_r(cpu.l)
+	case 0x35:
+		cpu.dec_addr(cpu.hl(), memory)
 	}
 }
 
-// 8-bit loads
+// 8-Bit Loads
 func (cpu *cpu) ld_r(r *byte, n byte, incrementBy uint16) {
 	*r = n
 	cpu.pc += incrementBy
@@ -291,7 +465,7 @@ func (cpu *cpu) ld_addr(addr uint16, n byte, memory *memory, incrementBy uint16)
 	cpu.pc += incrementBy
 }
 
-// 16-bit loads
+// 16-Bit Loads
 func (cpu *cpu) ld_r_double(r1 *byte, r2 *byte, nn uint16, incrementBy uint16) {
 	*r1 = uint8(nn >> 8)
 	*r2 = uint8(nn & 0x00FF)
@@ -313,6 +487,7 @@ func (cpu *cpu) push(nn uint16, memory *memory) {
 	memory.write(cpu.sp, uint8(nn>>8))
 	cpu.sp--
 	memory.write(cpu.sp, uint8(nn&0x00FF))
+	cpu.pc++
 }
 
 func (cpu *cpu) pop(r1 *byte, r2 *byte, memory *memory) {
@@ -320,4 +495,77 @@ func (cpu *cpu) pop(r1 *byte, r2 *byte, memory *memory) {
 	cpu.sp++
 	*r2 = memory.read(cpu.sp)
 	cpu.sp++
+	cpu.pc++
+}
+
+// 8-Bit ALU
+func (cpu *cpu) add_r(r *byte, n byte, incrementBy uint16) {
+	*r += n
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) adc_r(r *byte, n byte, incrementBy uint16) {
+	*r += (n + (*cpu.f & byte(flagC)))
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) sub_r(r *byte, n byte, incrementBy uint16) {
+	*r -= n
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) sbc_r(r *byte, n byte, incrementBy uint16) {
+	*r -= (n + (*cpu.f & byte(flagC)))
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) and_r(r *byte, n byte, incrementBy uint16) {
+	*r &= n
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) or_r(r *byte, n byte, incrementBy uint16) {
+	*r |= n
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) xor_r(r *byte, n byte, incrementBy uint16) {
+	*r ^= n
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) cp_r(r *byte, n byte, incrementBy uint16) {
+	// TODO: set flags
+	cpu.pc += incrementBy
+}
+
+func (cpu *cpu) inc_r(n *byte) {
+	*n++
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) inc_addr(addr uint16, memory *memory) {
+	memory.increment(addr)
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) dec_r(n *byte) {
+	*n--
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) dec_addr(addr uint16, memory *memory) {
+	memory.decrement(addr)
+	// TODO: set flags
+	cpu.pc++
 }
