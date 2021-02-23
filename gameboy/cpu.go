@@ -63,6 +63,10 @@ func double(n1 byte, n2 byte) uint16 {
 	return uint16(n1)<<8 | uint16(n2)
 }
 
+func (cpu *cpu) getBit(n byte, bitPos int) byte {
+	return (n >> bitPos) & 1
+}
+
 func (cpu *cpu) setBit(n byte, bitPos int) byte {
 	return n | (1 << bitPos)
 }
@@ -697,6 +701,28 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.rrc_r(cpu.a)
 	case 0x1F:
 		cpu.rr_r(cpu.a)
+	case 0xC3:
+		cpu.jp_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)))
+	case 0xC2:
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagZ, 0)
+	case 0xCA:
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagZ, 1)
+	case 0xD2:
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagC, 0)
+	case 0xDA:
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagC, 1)
+	case 0xE9:
+		cpu.jp_nn(memory.readDouble(cpu.hl()))
+	case 0x18:
+		cpu.jp_nn(cpu.pc + uint16(memory.read(cpu.pc)))
+	case 0x20:
+		cpu.jp_nn_cc(cpu.pc+uint16(memory.read(cpu.pc)), flagZ, 0)
+	case 0x28:
+		cpu.jp_nn_cc(cpu.pc+uint16(memory.read(cpu.pc)), flagZ, 1)
+	case 0x30:
+		cpu.jp_nn_cc(cpu.pc+uint16(memory.read(cpu.pc)), flagC, 0)
+	case 0x38:
+		cpu.jp_nn_cc(cpu.pc+uint16(memory.read(cpu.pc)), flagC, 1)
 	default:
 		panic(fmt.Sprintf("unknown instruction: %X", opcode))
 	}
@@ -1190,4 +1216,17 @@ func (cpu *cpu) res_addr(addr uint16, bitPos byte, memory *memory) {
 	n = cpu.clearBit(n, int(bitPos))
 	memory.write(addr, n)
 	cpu.pc += 2
+}
+
+// Jumps
+func (cpu *cpu) jp_nn(addr uint16) {
+	cpu.pc = addr
+}
+
+func (cpu *cpu) jp_nn_cc(addr uint16, flagPos int, expected byte) {
+	if cpu.getBit(*cpu.f, flagPos) == expected {
+		cpu.pc = addr
+	} else {
+		cpu.pc += 3
+	}
 }
