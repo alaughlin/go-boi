@@ -35,6 +35,6 @@ func (console *Console) LoadGame(path string) {
 func (console *Console) Start() {
 	for {
 		console.cpu.ExecuteOpcode(console.memory)
-		time.Sleep(time.Duration(1000))
+		time.Sleep(time.Duration(500))
 	}
 }

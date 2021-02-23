@@ -1,5 +1,10 @@
 package gameboy
 
+import (
+	"fmt"
+	"math/bits"
+)
+
 type cpu struct {
 	a  *byte
 	b  *byte
@@ -58,12 +63,20 @@ func double(n1 byte, n2 byte) uint16 {
 	return uint16(n1)<<8 | uint16(n2)
 }
 
+func (cpu *cpu) setBit(n byte, bitPos int) byte {
+	return n | (1 << bitPos)
+}
+
+func (cpu *cpu) clearBit(n byte, bitPos int) byte {
+	return n &^ (1 << bitPos)
+}
+
 func (cpu *cpu) setFlag(flagPos int) {
-	*cpu.f |= (1 << flagPos)
+	*cpu.f = cpu.setBit(*cpu.f, flagPos)
 }
 
 func (cpu *cpu) clearFlag(flagPos int) {
-	*cpu.f &^= (1 << flagPos)
+	*cpu.f = cpu.clearBit(*cpu.f, flagPos)
 }
 
 func (cpu *cpu) ExecuteOpcode(memory *memory) {
@@ -477,6 +490,167 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.dec_r_double(cpu.h, cpu.l)
 	case 0x3B:
 		cpu.dec_sp()
+	case 0xCB:
+		switch memory.read(cpu.pc + 1) {
+		case 0x37:
+			cpu.swap_r(cpu.a)
+		case 0x30:
+			cpu.swap_r(cpu.b)
+		case 0x31:
+			cpu.swap_r(cpu.c)
+		case 0x32:
+			cpu.swap_r(cpu.d)
+		case 0x33:
+			cpu.swap_r(cpu.e)
+		case 0x34:
+			cpu.swap_r(cpu.h)
+		case 0x35:
+			cpu.swap_r(cpu.l)
+		case 0x36:
+			cpu.swap_addr(cpu.hl(), memory)
+		case 0x07:
+			cpu.rlc_r(cpu.a)
+		case 0x00:
+			cpu.rlc_r(cpu.b)
+		case 0x01:
+			cpu.rlc_r(cpu.c)
+		case 0x02:
+			cpu.rlc_r(cpu.d)
+		case 0x03:
+			cpu.rlc_r(cpu.e)
+		case 0x04:
+			cpu.rlc_r(cpu.h)
+		case 0x05:
+			cpu.rlc_r(cpu.l)
+		case 0x06:
+			cpu.rlc_addr(cpu.hl(), memory)
+		case 0x17:
+			cpu.rl_r(cpu.a)
+		case 0x10:
+			cpu.rl_r(cpu.b)
+		case 0x11:
+			cpu.rl_r(cpu.c)
+		case 0x12:
+			cpu.rl_r(cpu.d)
+		case 0x13:
+			cpu.rl_r(cpu.e)
+		case 0x14:
+			cpu.rl_r(cpu.h)
+		case 0x15:
+			cpu.rl_r(cpu.l)
+		case 0x16:
+			cpu.rl_addr(cpu.hl(), memory)
+		case 0x0F:
+			cpu.rrc_r(cpu.a)
+		case 0x08:
+			cpu.rrc_r(cpu.b)
+		case 0x09:
+			cpu.rrc_r(cpu.c)
+		case 0x0A:
+			cpu.rrc_r(cpu.d)
+		case 0x0B:
+			cpu.rrc_r(cpu.e)
+		case 0x0C:
+			cpu.rrc_r(cpu.h)
+		case 0x0D:
+			cpu.rrc_r(cpu.l)
+		case 0x0E:
+			cpu.rrc_addr(cpu.hl(), memory)
+		case 0x1F:
+			cpu.rr_r(cpu.a)
+		case 0x18:
+			cpu.rr_r(cpu.b)
+		case 0x19:
+			cpu.rr_r(cpu.c)
+		case 0x1A:
+			cpu.rr_r(cpu.d)
+		case 0x1B:
+			cpu.rr_r(cpu.e)
+		case 0x1C:
+			cpu.rr_r(cpu.h)
+		case 0x1D:
+			cpu.rr_r(cpu.l)
+		case 0x1E:
+			cpu.rr_addr(cpu.hl(), memory)
+		case 0x27:
+			cpu.sla_r(cpu.a)
+		case 0x20:
+			cpu.sla_r(cpu.b)
+		case 0x21:
+			cpu.sla_r(cpu.c)
+		case 0x22:
+			cpu.sla_r(cpu.d)
+		case 0x23:
+			cpu.sla_r(cpu.e)
+		case 0x24:
+			cpu.sla_r(cpu.h)
+		case 0x25:
+			cpu.sla_r(cpu.l)
+		case 0x26:
+			cpu.sla_addr(cpu.hl(), memory)
+		case 0x2F:
+			cpu.sra_r(cpu.a)
+		case 0x28:
+			cpu.sra_r(cpu.b)
+		case 0x29:
+			cpu.sra_r(cpu.c)
+		case 0x2A:
+			cpu.sra_r(cpu.d)
+		case 0x2B:
+			cpu.sra_r(cpu.e)
+		case 0x2C:
+			cpu.sra_r(cpu.h)
+		case 0x2D:
+			cpu.sra_r(cpu.l)
+		case 0x2E:
+			cpu.sra_addr(cpu.hl(), memory)
+		case 0x3F:
+			cpu.srl_r(cpu.a)
+		case 0x38:
+			cpu.srl_r(cpu.b)
+		case 0x39:
+			cpu.srl_r(cpu.c)
+		case 0x3A:
+			cpu.srl_r(cpu.d)
+		case 0x3B:
+			cpu.srl_r(cpu.e)
+		case 0x3C:
+			cpu.srl_r(cpu.h)
+		case 0x3D:
+			cpu.srl_r(cpu.l)
+		case 0x3E:
+			cpu.srl_addr(cpu.hl(), memory)
+		default:
+			panic(fmt.Sprintf("unknown instruction: CB %X", opcode))
+		}
+	case 0x27:
+		cpu.da_r(cpu.a)
+	case 0x2F:
+		cpu.cpl_r(cpu.a)
+	case 0x3F:
+		cpu.ccf()
+	case 0x37:
+		cpu.scf()
+	case 0x00:
+		cpu.nop()
+	case 0x76:
+		cpu.halt()
+	case 0x10:
+		cpu.stop()
+	case 0xF3:
+		cpu.di()
+	case 0xFB:
+		cpu.ei()
+	case 0x07:
+		cpu.rlc_r(cpu.a)
+	case 0x17:
+		cpu.rl_r(cpu.a)
+	case 0x0F:
+		cpu.rrc_r(cpu.a)
+	case 0x1F:
+		cpu.rr_r(cpu.a)
+	default:
+		panic(fmt.Sprintf("unknown instruction: %X", opcode))
 	}
 }
 
@@ -632,5 +806,296 @@ func (cpu *cpu) dec_r_double(r1 *byte, r2 *byte) {
 
 func (cpu *cpu) dec_sp() {
 	cpu.sp--
+	cpu.pc++
+}
+
+// Misc
+func (cpu *cpu) swap_r(r *byte) {
+	*r = *r&0x0F<<4 | *r>>4
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) swap_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	memory.write(addr, n&0x0F<<4|n>>4)
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) da_r(r *byte) {
+	// TODO
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) cpl_r(r *byte) {
+	*r ^= *r
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) ccf() {
+	// TODO
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) scf() {
+	// TODO
+	// TODO: set flags
+	cpu.pc++
+}
+
+func (cpu *cpu) nop() {
+	cpu.pc++
+}
+
+func (cpu *cpu) halt() {
+	// TODO: disable opcode execution until interrupt
+	cpu.pc++
+}
+
+func (cpu *cpu) stop() {
+	/// TODO: disable opcode execution until button pressed
+	cpu.pc++
+}
+
+func (cpu *cpu) di() {
+	// TODO: disable interrupts AFTER following instruction
+	cpu.pc++
+}
+
+func (cpu *cpu) ei() {
+	// TODO: enable interrupts AFTER following instruction
+	cpu.pc++
+}
+
+// Rotates and Shifts
+func (cpu *cpu) rlc_r(r *byte) {
+	bit7 := 128 & *r
+	if bit7 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	*r = byte(bits.RotateLeft8(uint8(*r), 1))
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) rlc_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	bit7 := 128 & n
+	if bit7 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	memory.write(addr, byte(bits.RotateLeft8(uint8(n), 1)))
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) rl_r(r *byte) {
+	bit7 := 128 & *r
+	if bit7 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	*r = byte(bits.RotateLeft8(uint8(*r), 1))
+	if *cpu.f&16 == 0 {
+		*r = cpu.clearBit(*r, 0)
+	} else {
+		*r = cpu.setBit(*r, 0)
+	}
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) rl_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	bit7 := 128 & n
+	if bit7 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	n = byte(bits.RotateLeft8(uint8(n), 1))
+	if *cpu.f&16 == 0 {
+		n = cpu.clearBit(n, 0)
+	} else {
+		n = cpu.setBit(n, 0)
+	}
+	memory.write(addr, n)
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) rrc_r(r *byte) {
+	bit0 := 1 & *r
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	*r = byte(bits.RotateLeft8(uint8(*r), -1))
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) rrc_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	bit0 := 1 & n
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	n >>= 1
+	memory.write(addr, n)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) rr_r(r *byte) {
+	bit0 := 1 & *r
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	*r >>= 1
+	if *cpu.f&16 == 0 {
+		*r = cpu.clearBit(*r, 7)
+	} else {
+		*r = cpu.setBit(*r, 7)
+	}
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) rr_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	bit0 := 1 & n
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	n >>= 1
+	if *cpu.f&16 == 0 {
+		n = cpu.clearBit(n, 7)
+	} else {
+		n = cpu.setBit(n, 7)
+	}
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) sla_r(r *byte) {
+	bit7 := 128 & *r
+	if bit7 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	*r <<= 1
+	*r = cpu.clearBit(*r, 0)
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) sla_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	bit7 := 128 & n
+	if bit7 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	n <<= 1
+	n = cpu.clearBit(n, 0)
+	memory.write(addr, n)
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) sra_r(r *byte) {
+	bit0 := 1 & *r
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	*r >>= 1
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) sra_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	bit0 := 1 & n
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	n >>= 1
+	memory.write(addr, n)
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) srl_r(r *byte) {
+	bit0 := 1 & *r
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	*r >>= 1
+	*r = cpu.clearBit(*r, 7)
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
+	cpu.pc++
+}
+
+func (cpu *cpu) srl_addr(addr uint16, memory *memory) {
+	n := memory.read(addr)
+	bit0 := 1 & n
+	if bit0 == 0 {
+		cpu.clearFlag(flagC)
+	} else {
+		cpu.setFlag(flagC)
+	}
+	n >>= 1
+	n = cpu.clearBit(n, 7)
+	memory.write(addr, n)
+	cpu.clearFlag(flagZ)
+	cpu.clearFlag(flagN)
+	cpu.clearFlag(flagH)
 	cpu.pc++
 }
