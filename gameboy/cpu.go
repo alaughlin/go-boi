@@ -724,15 +724,41 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 	case 0x38:
 		cpu.jp_nn_cc(cpu.pc+uint16(memory.read(cpu.pc)), flagC, 1)
 	case 0xCD:
-		cpu.call_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), memory)
+		cpu.call_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, memory)
 	case 0xC4:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagZ, 0, memory)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagZ, 0, memory)
 	case 0xCC:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagZ, 1, memory)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagZ, 1, memory)
 	case 0xD4:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagC, 0, memory)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagC, 0, memory)
 	case 0xDC:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagC, 1, memory)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagC, 1, memory)
+	case 0xC7:
+		cpu.rst_n(0x00, memory)
+	case 0xCF:
+		cpu.rst_n(0x08, memory)
+	case 0xD7:
+		cpu.rst_n(0x10, memory)
+	case 0xDF:
+		cpu.rst_n(0x18, memory)
+	case 0xE7:
+		cpu.rst_n(0x20, memory)
+	case 0xEF:
+		cpu.rst_n(0x28, memory)
+	case 0xF7:
+		cpu.rst_n(0x30, memory)
+	case 0xFF:
+		cpu.rst_n(0x38, memory)
+	case 0xC9:
+		cpu.ret(memory)
+	case 0xC0:
+		cpu.ret_cc(flagZ, 0, memory)
+	case 0xC8:
+		cpu.ret_cc(flagZ, 1, memory)
+	case 0xD0:
+		cpu.ret_cc(flagC, 0, memory)
+	case 0xD8:
+		cpu.ret_cc(flagC, 1, memory)
 	default:
 		panic(fmt.Sprintf("unknown instruction: %X", opcode))
 	}
@@ -1242,16 +1268,41 @@ func (cpu *cpu) jp_nn_cc(addr uint16, flagPos int, expected byte) {
 }
 
 // Calls
-func (cpu *cpu) call_nn(addr uint16, nextInstruction byte, memory *memory) {
+func (cpu *cpu) call_nn(addr uint16, nextInstructionAddr uint16, memory *memory) {
 	cpu.sp--
-	memory.write(cpu.sp, nextInstruction)
+	memory.write(cpu.sp, uint8(nextInstructionAddr&0x00FF))
+	cpu.sp--
+	memory.write(cpu.sp, uint8(nextInstructionAddr>>8&0x00FF))
+
 	cpu.pc = addr
 }
 
-func (cpu *cpu) call_cc_nn(addr uint16, nextInstruction byte, flagPos int, expected byte, memory *memory) {
+func (cpu *cpu) call_cc_nn(addr uint16, nextInstructionAddr uint16, flagPos int, expected byte, memory *memory) {
 	if cpu.getBit(*cpu.f, flagPos) == expected {
-		cpu.call_nn(addr, nextInstruction, memory)
+		cpu.call_nn(addr, nextInstructionAddr, memory)
 	} else {
 		cpu.pc += 3
+	}
+}
+
+// Restarts
+func (cpu *cpu) rst_n(n byte, memory *memory) {
+	cpu.sp--
+	memory.write(cpu.sp, uint8(cpu.pc&0x00FF))
+	cpu.sp--
+	memory.write(cpu.sp, uint8(cpu.pc>>8&0x00FF))
+	cpu.pc = uint16(n)
+}
+
+// Returns
+func (cpu *cpu) ret(memory *memory) {
+	cpu.pc = memory.readDouble(cpu.sp)
+}
+
+func (cpu *cpu) ret_cc(flagPos int, expected byte, memory *memory) {
+	if cpu.getBit(*cpu.f, flagPos) == expected {
+		cpu.ret(memory)
+	} else {
+		cpu.pc++
 	}
 }
