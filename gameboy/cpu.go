@@ -723,6 +723,16 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.jp_nn_cc(cpu.pc+uint16(memory.read(cpu.pc)), flagC, 0)
 	case 0x38:
 		cpu.jp_nn_cc(cpu.pc+uint16(memory.read(cpu.pc)), flagC, 1)
+	case 0xCD:
+		cpu.call_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), memory)
+	case 0xC4:
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagZ, 0, memory)
+	case 0xCC:
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagZ, 1, memory)
+	case 0xD4:
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagC, 0, memory)
+	case 0xDC:
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), memory.read(cpu.pc+3), flagC, 1, memory)
 	default:
 		panic(fmt.Sprintf("unknown instruction: %X", opcode))
 	}
@@ -1226,6 +1236,21 @@ func (cpu *cpu) jp_nn(addr uint16) {
 func (cpu *cpu) jp_nn_cc(addr uint16, flagPos int, expected byte) {
 	if cpu.getBit(*cpu.f, flagPos) == expected {
 		cpu.pc = addr
+	} else {
+		cpu.pc += 3
+	}
+}
+
+// Calls
+func (cpu *cpu) call_nn(addr uint16, nextInstruction byte, memory *memory) {
+	cpu.sp--
+	memory.write(cpu.sp, nextInstruction)
+	cpu.pc = addr
+}
+
+func (cpu *cpu) call_cc_nn(addr uint16, nextInstruction byte, flagPos int, expected byte, memory *memory) {
+	if cpu.getBit(*cpu.f, flagPos) == expected {
+		cpu.call_nn(addr, nextInstruction, memory)
 	} else {
 		cpu.pc += 3
 	}
