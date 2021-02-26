@@ -26,14 +26,20 @@ var (
 )
 
 func initializeCPU() *cpu {
+	a := byte(0x00)
+	b := byte(0x00)
 	c := byte(0x13)
+	d := byte(0x00)
 	e := byte(0xD8)
 	f := byte(0xB0)
 	h := byte(0x01)
 	l := byte(0x4D)
 
 	return &cpu{
+		a:  &a,
+		b:  &b,
 		c:  &c,
+		d:  &d,
 		e:  &e,
 		f:  &f,
 		h:  &h,
@@ -85,9 +91,9 @@ func (cpu *cpu) clearFlag(flagPos int) {
 
 func (cpu *cpu) ExecuteOpcode(memory *memory) {
 	opcode := memory.read(cpu.pc)
+	fmt.Printf("%X: %X\n", cpu.pc, opcode)
 
 	switch opcode {
-	// 8-Bit Loads
 	case 0x06:
 		cpu.ld_r(cpu.b, memory.read(cpu.pc+1), 2)
 	case 0x0E:
@@ -259,10 +265,9 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) {
 		cpu.ld_addr(cpu.hl(), *cpu.a, memory, 1)
 		memory.increment(cpu.hl())
 	case 0xE0:
-		cpu.ld_addr(0xFF00+uint16(memory.read(cpu.pc+1)), *cpu.a, memory, 1)
+		cpu.ld_addr(0xFF00+uint16(memory.read(cpu.pc+1)), *cpu.a, memory, 2)
 	case 0xF0:
-		cpu.ld_r(cpu.a, memory.read(0xFF00+uint16(memory.read(cpu.pc+1))), 1)
-	// 16-Bit Loads
+		cpu.ld_r(cpu.a, memory.read(0xFF00+uint16(memory.read(cpu.pc+1))), 2)
 	case 0x01:
 		cpu.ld_r_double(cpu.b, cpu.c, memory.readDouble(cpu.pc+1), 3)
 	case 0x11:
@@ -771,7 +776,11 @@ func (cpu *cpu) ld_r(r *byte, n byte, incrementBy uint16) {
 }
 
 func (cpu *cpu) ld_addr(addr uint16, n byte, memory *memory, incrementBy uint16) {
-	memory.write(addr, n)
+	if addr == 0xFFFF {
+		*cpu.f = n
+	} else {
+		memory.write(addr, n)
+	}
 	cpu.pc += incrementBy
 }
 
@@ -812,6 +821,10 @@ func (cpu *cpu) pop(r1 *byte, r2 *byte, memory *memory) {
 func (cpu *cpu) add_r(r *byte, n byte, incrementBy uint16) {
 	*r += n
 	// TODO: set flags
+	if *r == 0 {
+		cpu.setFlag(flagZ)
+	}
+	cpu.clearFlag(flagN)
 	cpu.pc += incrementBy
 }
 
@@ -961,10 +974,7 @@ func (cpu *cpu) nop() {
 	cpu.pc++
 }
 
-func (cpu *cpu) halt() {
-	// TODO: disable opcode execution until interrupt
-	cpu.pc++
-}
+func (cpu *cpu) halt() {}
 
 func (cpu *cpu) stop() {
 	/// TODO: disable opcode execution until button pressed
@@ -992,7 +1002,7 @@ func (cpu *cpu) rlc_r(r *byte) {
 	*r = byte(bits.RotateLeft8(uint8(*r), 1))
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) rlc_addr(addr uint16, memory *memory) {
@@ -1006,7 +1016,7 @@ func (cpu *cpu) rlc_addr(addr uint16, memory *memory) {
 	memory.write(addr, byte(bits.RotateLeft8(uint8(n), 1)))
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) rl_r(r *byte) {
@@ -1025,7 +1035,7 @@ func (cpu *cpu) rl_r(r *byte) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) rl_addr(addr uint16, memory *memory) {
@@ -1046,7 +1056,7 @@ func (cpu *cpu) rl_addr(addr uint16, memory *memory) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) rrc_r(r *byte) {
@@ -1059,7 +1069,7 @@ func (cpu *cpu) rrc_r(r *byte) {
 	*r = byte(bits.RotateLeft8(uint8(*r), -1))
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) rrc_addr(addr uint16, memory *memory) {
@@ -1074,7 +1084,7 @@ func (cpu *cpu) rrc_addr(addr uint16, memory *memory) {
 	memory.write(addr, n)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) rr_r(r *byte) {
@@ -1093,7 +1103,7 @@ func (cpu *cpu) rr_r(r *byte) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) rr_addr(addr uint16, memory *memory) {
@@ -1113,7 +1123,7 @@ func (cpu *cpu) rr_addr(addr uint16, memory *memory) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) sla_r(r *byte) {
@@ -1128,7 +1138,7 @@ func (cpu *cpu) sla_r(r *byte) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) sla_addr(addr uint16, memory *memory) {
@@ -1145,7 +1155,7 @@ func (cpu *cpu) sla_addr(addr uint16, memory *memory) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) sra_r(r *byte) {
@@ -1159,7 +1169,7 @@ func (cpu *cpu) sra_r(r *byte) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) sra_addr(addr uint16, memory *memory) {
@@ -1175,7 +1185,7 @@ func (cpu *cpu) sra_addr(addr uint16, memory *memory) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) srl_r(r *byte) {
@@ -1190,7 +1200,7 @@ func (cpu *cpu) srl_r(r *byte) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 func (cpu *cpu) srl_addr(addr uint16, memory *memory) {
@@ -1207,7 +1217,7 @@ func (cpu *cpu) srl_addr(addr uint16, memory *memory) {
 	cpu.clearFlag(flagZ)
 	cpu.clearFlag(flagN)
 	cpu.clearFlag(flagH)
-	cpu.pc += 2
+	cpu.pc++
 }
 
 // Bit Opcodes
@@ -1232,6 +1242,7 @@ func (cpu *cpu) bit_addr(addr uint16, bitPos byte, memory *memory) {
 
 func (cpu *cpu) set_r(r *byte, bitPos byte) {
 	*r = cpu.setBit(*r, int(bitPos))
+	fmt.Printf("wtf")
 	cpu.pc += 2
 }
 
