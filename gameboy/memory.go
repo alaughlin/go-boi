@@ -94,6 +94,10 @@ func (memory *memory) increment(address uint16) {
 	(*slice)[address-offset]++
 }
 
+func (memory *memory) getVRAM() *[]byte {
+	return memory.vram
+}
+
 func (memory *memory) mapAddress(address uint16) (*[]byte, uint16) {
 	if address < 0x4000 {
 		return memory.bank0, 0

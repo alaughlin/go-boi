@@ -36,3 +36,7 @@ func (console *Console) loadGame(path string) {
 func (console *Console) Tick() {
 	console.cpu.ExecuteOpcode(console.memory)
 }
+
+func (console *Console) GetVRAM() *[]byte {
+	return console.memory.getVRAM()
+}
