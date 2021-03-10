@@ -8,6 +8,7 @@ type memory struct {
 	wram0      *[]byte
 	wram1      *[]byte
 	oam        *[]byte
+	unusable   *[]byte
 	io         *[]byte
 	hram       *[]byte
 	interrupts *byte
@@ -21,8 +22,9 @@ func initializeMemory() *memory {
 	wram0 := make([]byte, 4096)
 	wram1 := make([]byte, 4096)
 	oam := make([]byte, 160)
+	unusable := make([]byte, 96)
 	io := make([]byte, 128)
-	hram := make([]byte, 126)
+	hram := make([]byte, 127)
 	interrupts := byte(0)
 
 	memory := &memory{
@@ -33,6 +35,7 @@ func initializeMemory() *memory {
 		wram0:      &wram0,
 		wram1:      &wram1,
 		oam:        &oam,
+		unusable:   &unusable,
 		io:         &io,
 		hram:       &hram,
 		interrupts: &interrupts,
@@ -66,6 +69,10 @@ func (memory *memory) initializeValues() {
 }
 
 func (memory *memory) read(address uint16) byte {
+	if address == 0xFFFF {
+		return *memory.interrupts
+	}
+
 	slice, offset := memory.mapAddress(address)
 	return (*slice)[address-offset]
 }
@@ -94,10 +101,6 @@ func (memory *memory) increment(address uint16) {
 	(*slice)[address-offset]++
 }
 
-func (memory *memory) getVRAM() *[]byte {
-	return memory.vram
-}
-
 func (memory *memory) mapAddress(address uint16) (*[]byte, uint16) {
 	if address < 0x4000 {
 		return memory.bank0, 0
@@ -111,12 +114,14 @@ func (memory *memory) mapAddress(address uint16) (*[]byte, uint16) {
 		return memory.wram0, 0xC000
 	} else if address < 0xE000 {
 		return memory.wram1, 0xD000
+	} else if address < 0xEFFF {
+		return memory.wram0, 0xE000
 	} else if address < 0xFE00 {
-		panic("accessing echo ram")
+		return memory.wram1, 0xEFFF
 	} else if address < 0xFEA0 {
 		return memory.oam, 0xFE00
 	} else if address < 0xFF00 {
-		panic("accessing unusable ram")
+		return memory.unusable, 0xFEA0
 	} else if address < 0xFF80 {
 		return memory.io, 0xFF00
 	} else if address < 0xFFFF {

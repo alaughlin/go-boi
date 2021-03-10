@@ -6,15 +6,17 @@ import (
 
 // Console holds all the moving parts
 type Console struct {
-	cpu    *cpu
-	memory *memory
+	cpu     *cpu
+	memory  *memory
+	display *display
 }
 
-// InitializeConsole initializes all the values a Gameboy needs to start
-func InitializeConsole(romPath string) *Console {
+// InitializeConsole initializes all the moving parts
+func InitializeConsole(romPath string, width int, height int) *Console {
 	console := &Console{
-		cpu:    initializeCPU(),
-		memory: initializeMemory(),
+		cpu:     initializeCPU(),
+		memory:  initializeMemory(),
+		display: initalizeDisplay(width, height),
 	}
 
 	console.loadGame(romPath)
@@ -28,15 +30,17 @@ func (console *Console) loadGame(path string) {
 		panic("ROM not found")
 	}
 
-	for i := 0; i < 32768; i++ {
+	for i := range romData {
 		console.memory.write(uint16(i), romData[i])
 	}
 }
 
-func (console *Console) Tick() {
-	console.cpu.ExecuteOpcode(console.memory)
+// Tick executes a single instruction
+func (console *Console) Tick() int {
+	return console.cpu.ExecuteOpcode(console.memory)
 }
 
-func (console *Console) GetVRAM() *[]byte {
-	return console.memory.getVRAM()
+// GetScreenData returns an array of rgba values to draw
+func (console *Console) GetScreenData() []byte {
+	return console.display.ScreenData
 }
