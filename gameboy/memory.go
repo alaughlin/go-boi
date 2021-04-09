@@ -68,6 +68,13 @@ func (memory *memory) initializeValues() {
 	memory.write(0xFF49, 0xFF)
 }
 
+func (memory *memory) loadGame(romData []byte) {
+	for i := range romData {
+		slice, offset := memory.mapAddress(uint16(i))
+		(*slice)[uint16(i)-offset] = romData[i]
+	}
+}
+
 func (memory *memory) read(address uint16) byte {
 	if address == 0xFFFF {
 		return *memory.interrupts
@@ -82,8 +89,14 @@ func (memory *memory) readDouble(address uint16) uint16 {
 }
 
 func (memory *memory) write(address uint16, n byte) {
-	slice, offset := memory.mapAddress(address)
-	(*slice)[address-offset] = n
+	if address < 0x8000 {
+		panic("whoa no")
+	} else if address == 0xFFFF {
+		*memory.interrupts = n
+	} else {
+		slice, offset := memory.mapAddress(address)
+		(*slice)[address-offset] = n
+	}
 }
 
 func (memory *memory) writeDouble(address uint16, nn uint16) {

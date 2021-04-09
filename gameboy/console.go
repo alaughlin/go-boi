@@ -30,9 +30,7 @@ func (console *Console) loadGame(path string) {
 		panic("ROM not found")
 	}
 
-	for i := range romData {
-		console.memory.write(uint16(i), romData[i])
-	}
+	console.memory.loadGame(romData)
 }
 
 // Tick executes a single instruction

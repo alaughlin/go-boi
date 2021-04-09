@@ -20,10 +20,10 @@ type cpu struct {
 const (
 	initSP = 0xFFFE
 	initPC = 0x100
-	flagZ  = 7
-	flagN  = 6
-	flagH  = 5
-	flagC  = 4
+	zPos   = 7
+	nPos   = 6
+	hPos   = 5
+	cPos   = 4
 )
 
 func initializeCPU() *cpu {
@@ -54,16 +54,16 @@ func flagsToByte(flags flags) uint8 {
 	var f uint8
 
 	if flags.Z {
-		setBit(&f, flagZ)
+		setBit(&f, zPos)
 	}
 	if flags.N {
-		setBit(&f, flagN)
+		setBit(&f, nPos)
 	}
 	if flags.H {
-		setBit(&f, flagH)
+		setBit(&f, hPos)
 	}
 	if flags.C {
-		setBit(&f, flagC)
+		setBit(&f, cPos)
 	}
 
 	return f
@@ -72,16 +72,16 @@ func flagsToByte(flags flags) uint8 {
 func byteToFlags(n byte) flags {
 	flags := flags{}
 
-	if getBit(n, flagZ) == 1 {
+	if getBit(n, zPos) == 1 {
 		flags.Z = true
 	}
-	if getBit(n, flagN) == 1 {
+	if getBit(n, nPos) == 1 {
 		flags.N = true
 	}
-	if getBit(n, flagH) == 1 {
+	if getBit(n, hPos) == 1 {
 		flags.H = true
 	}
-	if getBit(n, flagC) == 1 {
+	if getBit(n, cPos) == 1 {
 		flags.C = true
 	}
 
@@ -133,7 +133,16 @@ func (cpu *cpu) PrintRegisters() {
 
 func (cpu *cpu) ExecuteOpcode(memory *memory) int {
 	opcode := memory.read(cpu.pc)
-	fmt.Printf("0x%X: 0x%X\n", cpu.pc, opcode)
+	fmt.Printf("%X: %X\n", cpu.pc, opcode)
+	if cpu.pc == 0x20B {
+		fmt.Println("foo")
+	}
+	if cpu.pc == 0x20D {
+		fmt.Println("bar")
+	}
+	if cpu.pc == 0x20F {
+		fmt.Println("wow")
+	}
 
 	switch opcode {
 	case 0x06:
@@ -321,17 +330,24 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) int {
 	case 0xF9:
 		cpu.ld_sp(cpu.hl(), 1, 8)
 	case 0xF8:
-		cpu.ld_r_double(cpu.h, cpu.l, cpu.sp+uint16(memory.read(cpu.pc+1)), 2, 12)
+		signedN := int8(memory.read(cpu.pc + 1))
+		var nn uint16
+		if signedN > 0 {
+			nn = cpu.sp + uint16(signedN)
+		} else {
+			nn = cpu.sp - uint16(-signedN)
+		}
+		cpu.ld_r_double(cpu.h, cpu.l, nn, 2, 12)
 	case 0x08:
-		cpu.ld_addr_double(double(memory.read(cpu.pc+1), memory.read(cpu.pc+2)), cpu.sp&0x00FF<<8|cpu.sp>>8, memory, 3, 20)
+		cpu.ld_addr_double(uint16(memory.read(cpu.pc+1)), uint16(memory.read(cpu.pc+2)), byte(cpu.sp), byte(cpu.sp>>8), memory, 3, 20)
 	case 0xF5:
-		cpu.push(memory.readDouble(cpu.af()), memory, 16)
+		cpu.push(cpu.af(), memory, 16)
 	case 0xC5:
-		cpu.push(memory.readDouble(cpu.bc()), memory, 16)
+		cpu.push(cpu.bc(), memory, 16)
 	case 0xD5:
-		cpu.push(memory.readDouble(cpu.de()), memory, 16)
+		cpu.push(cpu.de(), memory, 16)
 	case 0xE5:
-		cpu.push(memory.readDouble(cpu.hl()), memory, 16)
+		cpu.push(cpu.hl(), memory, 16)
 	case 0xF1:
 		cpu.pop_flag(cpu.a, cpu.flags, memory, 12)
 	case 0xC1:
@@ -750,35 +766,35 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) int {
 	case 0xC3:
 		cpu.jp_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), 16)
 	case 0xC2:
-		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagZ, 0)
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.flags.Z, false)
 	case 0xCA:
-		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagZ, 1)
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.flags.Z, true)
 	case 0xD2:
-		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagC, 0)
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.flags.C, false)
 	case 0xDA:
-		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), flagC, 1)
+		cpu.jp_nn_cc(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.flags.C, true)
 	case 0xE9:
-		cpu.jp_nn(memory.readDouble(cpu.hl()), 4)
+		cpu.jp_nn(cpu.hl(), 4)
 	case 0x18:
 		cpu.jr_n(memory.read(cpu.pc+1), 12)
 	case 0x20:
-		cpu.jr_n_cc(memory.read(cpu.pc+1), flagZ, 0)
+		cpu.jr_n_cc(memory.read(cpu.pc+1), cpu.flags.Z, false)
 	case 0x28:
-		cpu.jr_n_cc(memory.read(cpu.pc+1), flagZ, 1)
+		cpu.jr_n_cc(memory.read(cpu.pc+1), cpu.flags.Z, true)
 	case 0x30:
-		cpu.jr_n_cc(memory.read(cpu.pc+1), flagC, 0)
+		cpu.jr_n_cc(memory.read(cpu.pc+1), cpu.flags.C, false)
 	case 0x38:
-		cpu.jr_n_cc(memory.read(cpu.pc+1), flagC, 1)
+		cpu.jr_n_cc(memory.read(cpu.pc+1), cpu.flags.C, true)
 	case 0xCD:
 		cpu.call_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, memory, 24)
 	case 0xC4:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagZ, 0, memory, 12)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, zPos, 0, memory, 12)
 	case 0xCC:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagZ, 1, memory, 12)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, zPos, 1, memory, 12)
 	case 0xD4:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagC, 0, memory, 12)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, cPos, 0, memory, 12)
 	case 0xDC:
-		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, flagC, 1, memory, 12)
+		cpu.call_cc_nn(double(memory.read(cpu.pc+2), memory.read(cpu.pc+1)), cpu.pc+3, cPos, 1, memory, 12)
 	case 0xC7:
 		cpu.rst_n(0x00, memory, 16)
 	case 0xCF:
@@ -798,13 +814,13 @@ func (cpu *cpu) ExecuteOpcode(memory *memory) int {
 	case 0xC9:
 		cpu.ret(memory, 16)
 	case 0xC0:
-		cpu.ret_cc(flagZ, 0, memory)
+		cpu.ret_cc(cpu.flags.Z, false, memory)
 	case 0xC8:
-		cpu.ret_cc(flagZ, 1, memory)
+		cpu.ret_cc(cpu.flags.Z, true, memory)
 	case 0xD0:
-		cpu.ret_cc(flagC, 0, memory)
+		cpu.ret_cc(cpu.flags.C, false, memory)
 	case 0xD8:
-		cpu.ret_cc(flagC, 1, memory)
+		cpu.ret_cc(cpu.flags.C, true, memory)
 	case 0xD9:
 		cpu.reti(16)
 	default:
@@ -843,8 +859,9 @@ func (cpu *cpu) ld_r_double(r1 *byte, r2 *byte, nn uint16, incrementBy uint16, c
 	cpu.pc += incrementBy
 }
 
-func (cpu *cpu) ld_addr_double(addr uint16, nn uint16, memory *memory, incrementBy uint16, cycles int) {
-	memory.writeDouble(addr, nn)
+func (cpu *cpu) ld_addr_double(a1 uint16, a2 uint16, n1 uint8, n2 uint8, memory *memory, incrementBy uint16, cycles int) {
+	memory.write(a1, n1)
+	memory.write(a2, n2)
 	cpu.cycles = cycles
 	cpu.pc += incrementBy
 }
@@ -856,17 +873,20 @@ func (cpu *cpu) ld_sp(nn uint16, incrementBy uint16, cycles int) {
 }
 
 func (cpu *cpu) push(nn uint16, memory *memory, cycles int) {
-	cpu.sp -= 2
-	memory.writeDouble(cpu.sp, nn)
+	cpu.sp--
+	memory.write(cpu.sp, byte(nn>>8))
+	cpu.sp--
+	memory.write(cpu.sp, byte(nn))
 	cpu.cycles = cycles
 	cpu.pc++
 }
 
 func (cpu *cpu) pop(r1 *byte, r2 *byte, memory *memory, cycles int) {
-	nn := memory.readDouble(cpu.sp)
-	*r1 = byte(nn >> 8)
-	*r2 = byte(nn & 0x00FF)
-	cpu.sp += 2
+	*r2 = memory.read(cpu.sp)
+	cpu.sp++
+	*r1 = memory.read(cpu.sp)
+	cpu.sp++
+	cpu.cycles = cycles
 	cpu.pc++
 }
 
@@ -875,13 +895,14 @@ func (cpu *cpu) pop_flag(r1 *byte, flags *flags, memory *memory, cycles int) {
 	*r1 = byte(nn >> 8)
 	*flags = byteToFlags(byte(nn & 0x00FF))
 	cpu.sp += 2
+	cpu.cycles = cycles
 	cpu.pc++
 }
 
 // 8-Bit ALU
 func (cpu *cpu) add_r(r *byte, n byte, incrementBy uint16, cycles int) {
 	res := uint16(*r) + uint16(n)
-	cpu.flags.Z = (res & 0xFF) == 0
+	cpu.flags.Z = uint8(res) == 0
 	cpu.flags.N = false
 	cpu.flags.H = res > 0xF
 	cpu.flags.C = res > 0xFF
@@ -891,8 +912,8 @@ func (cpu *cpu) add_r(r *byte, n byte, incrementBy uint16, cycles int) {
 }
 
 func (cpu *cpu) adc_r(r *byte, n byte, incrementBy uint16, cycles int) {
-	res := uint16(*r) + uint16(n) + (uint16(flagsToByte(*cpu.flags) & byte(flagC)))
-	cpu.flags.Z = (res & 0xFF) == 0
+	res := uint16(*r) + uint16(n) + (uint16(flagsToByte(*cpu.flags) & byte(cPos)))
+	cpu.flags.Z = uint8(res) == 0
 	cpu.flags.N = false
 	cpu.flags.H = res > 0xF
 	cpu.flags.C = res > 0xFF
@@ -903,21 +924,21 @@ func (cpu *cpu) adc_r(r *byte, n byte, incrementBy uint16, cycles int) {
 
 func (cpu *cpu) sub_r(r *byte, n byte, incrementBy uint16, cycles int) {
 	res := int16(*r) - int16(n)
-	cpu.flags.Z = (res & 0xFF) == 0
+	cpu.flags.Z = uint8(res) == 0
 	cpu.flags.N = true
-	cpu.flags.H = (int8(*r&0xF) - int8(n&0xF)) < 0
-	cpu.flags.C = res < 0
+	cpu.flags.H = *r&0xF < n&0xF
+	cpu.flags.C = *r < n
 	*r = uint8(res)
 	cpu.cycles = cycles
 	cpu.pc += incrementBy
 }
 
 func (cpu *cpu) sbc_r(r *byte, n byte, incrementBy uint16, cycles int) {
-	res := uint16(*r) - uint16(n) - (uint16(flagsToByte(*cpu.flags) & byte(flagC)))
-	cpu.flags.Z = (res & 0xFF) == 0
+	res := uint16(*r) - uint16(n) - (uint16(flagsToByte(*cpu.flags) & byte(cPos)))
+	cpu.flags.Z = uint8(res) == 0
 	cpu.flags.N = true
-	cpu.flags.H = (int8(*r&0xF) - int8(n&0xF)) < 0
-	cpu.flags.C = res < 0
+	cpu.flags.H = *r&0xF < n&0xF
+	cpu.flags.C = *r < n
 	*r = uint8(res)
 	cpu.cycles = cycles
 	cpu.pc += incrementBy
@@ -966,11 +987,14 @@ func (cpu *cpu) cp_r(r *byte, n byte, incrementBy uint16, cycles int) {
 }
 
 func (cpu *cpu) inc_r(r *byte, cycles int) {
-	res := uint16(*r) + 1
-	cpu.flags.Z = uint8(res) == 0
+	if cpu.pc == 0x20C {
+		fmt.Println("what")
+	}
+	res := *r + 1
+	cpu.flags.Z = res == 0
 	cpu.flags.N = false
-	cpu.flags.H = res > 0xFF
-	*r = uint8(res)
+	cpu.flags.H = *r&0xF == 0xF
+	*r = res
 	cpu.cycles = cycles
 	cpu.pc++
 }
@@ -979,17 +1003,17 @@ func (cpu *cpu) inc_addr(addr uint16, memory *memory, cycles int) {
 	res := uint16(memory.read(addr)) + 1
 	cpu.flags.Z = uint8(res) == 0
 	cpu.flags.N = false
-	cpu.flags.H = res > 0xFF
+	cpu.flags.H = res&0xF == 0xF
 	memory.write(addr, uint8(res))
 	cpu.cycles = cycles
 	cpu.pc++
 }
 
 func (cpu *cpu) dec_r(r *byte, cycles int) {
-	res := int16(*r) - 1
-	cpu.flags.Z = uint8(res) == 0
+	res := *r - 1
+	cpu.flags.Z = res == 0
 	cpu.flags.N = true
-	cpu.flags.H = res < 0
+	cpu.flags.H = res > *r
 	*r = uint8(res)
 	cpu.cycles = cycles
 	cpu.pc++
@@ -1442,8 +1466,8 @@ func (cpu *cpu) jp_nn(addr uint16, cycles int) {
 	cpu.pc = addr
 }
 
-func (cpu *cpu) jp_nn_cc(addr uint16, flagPos int, expected byte) {
-	if getBit(flagsToByte(*cpu.flags), flagPos) == expected {
+func (cpu *cpu) jp_nn_cc(addr uint16, flag bool, expected bool) {
+	if flag == expected {
 		cpu.cycles = 16
 		cpu.pc = addr
 	} else {
@@ -1462,8 +1486,8 @@ func (cpu *cpu) jr_n(distance byte, cycles int) {
 	}
 }
 
-func (cpu *cpu) jr_n_cc(distance uint8, flagPos int, expected byte) {
-	if getBit(flagsToByte(*cpu.flags), flagPos) == expected {
+func (cpu *cpu) jr_n_cc(distance uint8, flag bool, expected bool) {
+	if flag == expected {
 		cpu.cycles = 12
 		signedDist := int8(distance)
 		if signedDist >= 0 {
@@ -1496,15 +1520,17 @@ func (cpu *cpu) call_cc_nn(addr uint16, nextInstructionAddr uint16, flagPos int,
 
 // Restarts
 func (cpu *cpu) rst_n(n byte, memory *memory, cycles int) {
-	cpu.sp -= 2
-	memory.writeDouble(cpu.sp, cpu.pc)
+	cpu.sp--
+	memory.write(cpu.sp, byte(cpu.pc>>8))
+	cpu.sp--
+	memory.write(cpu.sp, byte(cpu.pc))
 	cpu.cycles = cycles
 	cpu.pc = uint16(n)
 }
 
 // Returns
 func (cpu *cpu) ret(memory *memory, cycles int) {
-	pc := uint16(memory.read(cpu.sp+1)) | uint16(memory.read(cpu.sp))
+	pc := uint16(memory.read(cpu.sp+1))<<8 | uint16(memory.read(cpu.sp))
 	cpu.sp += 2
 	cpu.cycles = cycles
 	cpu.pc = pc
@@ -1515,8 +1541,8 @@ func (cpu *cpu) reti(cycles int) {
 	cpu.cycles = cycles
 }
 
-func (cpu *cpu) ret_cc(flagPos int, expected byte, memory *memory) {
-	if getBit(flagsToByte(*cpu.flags), flagPos) == expected {
+func (cpu *cpu) ret_cc(flag bool, expected bool, memory *memory) {
+	if flag == expected {
 		cpu.ret(memory, 20)
 	} else {
 		cpu.cycles = 8
